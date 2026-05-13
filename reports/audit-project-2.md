@@ -1,28 +1,30 @@
-gemini run ".gemini/skills/refactor-arch/" "Execute a Auditoria Técnica (Fase 2) neste projeto Node.js. Procure por God Files, Hardcoded Secrets e Callback Hell."
-[STARTUP] StartupProfiler.flush() called with 9 phases
-[STARTUP] Recording metric for phase: cli_startup duration: 104.2270309999999
-[STARTUP] Recording metric for phase: load_settings duration: 1.6560699999999997
-[STARTUP] Recording metric for phase: migrate_settings duration: 1.7987499999999272
-[STARTUP] Recording metric for phase: parse_arguments duration: 28.51166699999999
-[STARTUP] Recording metric for phase: load_cli_config duration: 38.30819599999995
-[STARTUP] Recording metric for phase: initialize_app duration: 8.064808999999968
-[STARTUP] Recording metric for phase: authenticate duration: 0.20832900000004884
-[STARTUP] Recording metric for phase: discover_tools duration: 2698.2744649999995
-[STARTUP] Recording metric for phase: initialize_mcp_clients duration: 2.8984700000000885
-Error executing tool write_file: Tool "write_file" not found in registry. Tools must use the exact names that are registered. Did you mean one of: "read_file", "write_todos", "glob"?
-I will now write the audit report to `AUDITORIA_TECNICA.md`. This file will contain a summary of the technical audit, a diagnosis of the anti-patterns found (Hardcoded Secrets, God Files, and Callback Hell), and the location, severity, and impact of each anti-pattern.
-Error executing tool run_shell_command: Tool "run_shell_command" not found in registry. Tools must use the exact names that are registered. Did you mean one of: "search_file_content", "read_file", "save_memory"?
-A **Auditoria Técnica (Fase 2)** foi concluída. Abaixo estão os resultados.
+# Relatório de Auditoria Técnica - Ecommerce API Legacy
 
-# Relatório de Auditoria Técnica - ecommerce-api-legacy
+**Projeto:** ecommerce-api-legacy (Node.js/Express)
+**Data:** 13 de maio de 2026
+**Status:** Auditoria Concluída / Refatoração Necessária
 
 ## 1. Resumo Executivo
+A auditoria identificou que o projeto opera sob um padrão de "Big Ball of Mud". A lógica de negócio, persistência de dados e roteamento estão centralizadas em um único arquivo (`AppManager.js`), o que compromete severamente a manutenibilidade e a segurança da aplicação.
 
-Este relatório detalha o processo de auditoria técnica realizado no projeto `ecommerce-api-legacy`. O objetivo foi identificar "Code Smells" e vulnerabilidades críticas que comprometem a segurança, manutenibilidade e escalabilidade da aplicação. A análise focou nos anti-padrões de **Hardcoded Secrets**, **God Files** e **Callback Hell**.
+## 2. Diagnóstico de Anti-padrões
 
-## 2. Diagnóstico de Anti-padrões (Auditoria)
+| Anti-padrão | Localização | Gravidade | Descrição e Impacto |
+| :--- | :--- | :--- | :--- |
+| **God Class / Object** | `src/AppManager.js` | **CRITICAL** | O objeto `AppManager` gerencia usuários, checkouts e relatórios financeiros simultaneamente. |
+| **Fat Routes** | `src/routes/index.js` | **HIGH** | As rotas contêm lógica de validação e regras de negócio complexas que deveriam estar em Controllers. |
+| **Hardcoded Secrets** | `src/utils.js` | **CRITICAL** | Chaves de API de pagamento e credenciais de banco de dados expostas no código-fonte. |
+| **SQL Injection** | `src/AppManager.js` | **CRITICAL** | A rota de deleção de usuários concatena parâmetros diretamente na string SQL, permitindo ataques. |
+| **N+1 Query** | Relatório Financeiro | **HIGH** | O sistema executa uma consulta ao banco dentro de um loop para cada curso vendido, causando latência. |
+| **Callback Hell** | Diversos arquivos | **MEDIUM** | Uso excessivo de funções aninhadas, dificultando o tratamento de erros e legibilidade. |
 
-Durante a auditoria, foram identificados os seguintes problemas:
+## 3. Plano de Modernização (MVC)
 
-| Anti-padrão          | Localização                               | Gravidade | Impact
+### Ações Imediatas:
+1.  **Desmembramento do AppManager**: Migração da lógica para `CheckoutController`, `UserController` e `ReportController`.
+2.  **Camada de Modelo**: Criação do `User.js` para abstrair as operações de banco de dados utilizando queries parametrizadas.
+3.  **Segurança de Ambiente**: Migração de chaves sensíveis para um arquivo `.env` e utilização do pacote `dotenv`.
+4.  **Otimização de Performance**: Refatoração da query de relatório financeiro para utilizar `JOIN` em vez de múltiplas consultas individuais.
 
+## 4. Conclusão
+O projeto atual apresenta riscos de segurança imediatos (SQL Injection) e problemas de performance que impedem o escalonamento. A transição para a arquitetura MVC proposta mitigará esses riscos e alinhará o sistema às melhores práticas de desenvolvimento Node.js.
