@@ -1,34 +1,35 @@
+import os
 from flask import Flask
-from flask_cors import CORS
-from database import db
+from dotenv import load_dotenv
 from routes.task_routes import task_bp
 from routes.user_routes import user_bp
-from routes.report_routes import report_bp
-import os, sys, json, datetime
+from database import init_db
 
-app = Flask(__name__)
+# 1. Carrega variáveis de ambiente (Segurança: Resolve Hardcoded Secrets)
+load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'super-secret-key-123'
+def create_app():
+    app = Flask(__name__)
 
-CORS(app)
-db.init_app(app)
+    # 2. Configurações Seguras
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-dev-key-ifpi-2026')
+    app.config['JSON_AS_ASCII'] = False
 
-app.register_blueprint(task_bp)
-app.register_blueprint(user_bp)
-app.register_blueprint(report_bp)
+    # 3. Inicializa o Banco de Dados
+    with app.app_context():
+        init_db()
 
-@app.route('/health')
-def health():
-    return {'status': 'ok', 'timestamp': str(datetime.datetime.now())}
+    # 4. Registro de Blueprints (MVC: Desacoplamento de Rotas)
+    app.register_blueprint(user_bp, url_prefix='/api/users')
+    app.register_blueprint(task_bp, url_prefix='/api/tasks')
 
-@app.route('/')
-def index():
-    return {'message': 'Task Manager API', 'version': '1.0'}
+    @app.route('/')
+    def health_check():
+        return {"status": "online", "message": "Task Manager API rodando no IFPI"}, 200
 
-with app.app_context():
-    db.create_all()
+    return app
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app = create_app()
+    PORT = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=PORT, debug=os.getenv('FLASK_DEBUG', 'False') == 'True')
