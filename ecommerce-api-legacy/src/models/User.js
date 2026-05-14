@@ -1,55 +1,72 @@
-from werkzeug.security import generate_password_hash, check_password_hash
-from database import get_db_connection
+const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcryptjs');
+const path = require('path');
 
-class User:
-    def __init__(self, id, name, email, password_hash):
-        self.id = id
-        self.name = name
-        self.email = email
-        self.password_hash = password_hash
+// Configuração da conexão com o banco de dados
+const dbPath = path.resolve(__dirname, '../../database.db');
+const db = new sqlite3.Database(dbPath);
 
-    @staticmethod
-    def create(name, email, password):
-        """Cria um usuário com a senha já criptografada (Hash Seguro)."""
-        # Substitui o MD5 por um hash PBKDF2 ou BCrypt (padrão do werkzeug)
-        hashed_password = generate_password_hash(password)
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute(
-                'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-                (name, email, hashed_password)
-            )
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
+class User {
+    constructor(id, name, email, passwordHash) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.passwordHash = passwordHash;
+    }
 
-    @staticmethod
-    def verify_login(email, password):
-        """Verifica se a senha fornecida bate com o hash no banco."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        user_data = cursor.execute(
-            'SELECT * FROM users WHERE email = ?', (email,)
-        ).fetchone()
-        conn.close()
+    /**
+     * Cria um usuário com a senha criptografada (Hash Seguro).
+     * @param {string} name 
+     * @param {string} email 
+     * @param {string} password 
+     */
+    static async create(name, email, password) {
+        // Gerando o hash da senha (substituindo o werkzeug por bcrypt)
+        const salt = await bcrypt.genSalt(10);
+        const hashed_password = await bcrypt.hash(password, salt);
 
-        if user_data and check_password_hash(user_data['password'], password):
-            return User(
-                user_data['id'], 
-                user_data['name'], 
-                user_data['email'], 
-                user_data['password']
-            )
-        return None
+        return new Promise((resolve, reject) => {
+            const query = 'INSERT INTO users (name, email, password) VALUES (?, ?, ?)';
+            db.run(query, [name, email, hashed_password], function(err) {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(this.lastID);
+            });
+        });
+    }
 
-    def to_dict(self):
-        """Retorna o usuário como dicionário, ocultando o hash da senha (Segurança)."""
+    /**
+     * Verifica se o login é válido e retorna a instância do usuário.
+     */
+    static async verifyLogin(email, password) {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT * FROM users WHERE email = ?';
+            db.get(query, [email], async (err, row) => {
+                if (err) return reject(err);
+                if (!row) return resolve(null);
+
+                // Verificação segura do hash (Blindagem contra Timing Attacks)
+                const isMatch = await bcrypt.compare(password, row.password);
+                if (isMatch) {
+                    resolve(new User(row.id, row.name, row.email, row.password));
+                } else {
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Retorna o usuário como objeto simples para a API, ocultando dados sensíveis.
+     */
+    toDict() {
         return {
-            "id": self.id,
-            "name": self.name,
-            "email": self.email
-            # Jamais retorne o password_hash aqui
-        }
+            id: this.id,
+            name: this.name,
+            email: this.email
+        };
+    }
+}
+
+module.exports = User;

@@ -1,44 +1,35 @@
 import os
-from flask import Flask, jsonify
+import sys
+from flask import Flask
+from flask_cors import CORS
 from dotenv import load_dotenv
 
-# 1. Carregamos as variáveis do arquivo .env (SECRET_KEY, etc.)
-load_dotenv()
+# Configuração de Path para reconhecer a pasta 'src'
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.join(current_dir, "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
 
-# 2. Importamos os Blueprints (nossas rotas organizadas)
-from routes.product_routes import product_bp
+# Importação das Rotas (Blueprints)
+try:
+    from routes.produto_routes import produto_bp
+except ImportError as e:
+    print(f"\n[ERRO] Falha ao carregar módulos: {e}")
+    sys.exit(1)
+
+load_dotenv()
 
 def create_app():
     app = Flask(__name__)
+    # Proteção de Segredos: Hardcoded Secrets [CRITICAL] corrigido
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "chave-ifpi-2026")
+    CORS(app)
 
-    # 3. Configurações de Segurança
-    # Nunca deixe a chave exposta! Pegamos do .env
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'chave-padrao-de-seguranca')
-    app.config['JSON_AS_ASCII'] = False # Garante acentos corretos no JSON
-
-    # 4. Rota Inicial (Para evitar o erro 404 na raiz)
-    @app.route('/')
-    def index():
-        return jsonify({
-            "status": "Online",
-            "message": "API do Desafio MBA - Refatoração MVC",
-            "version": "1.0.0"
-        }), 200
-
-    # 5. Registro de Módulos (Blueprints)
-    # Isso mantém o código modular. Cada domínio tem seu arquivo de rotas.
-    app.register_blueprint(product_bp)
-
+    # Registro de Rotas (MVC)
+    app.register_blueprint(produto_bp)
     return app
 
-# Inicialização do Servidor
 if __name__ == "__main__":
     app = create_app()
-    
-    # Em desenvolvimento usamos debug=True. 
-    # Em produção (no IFPI, por exemplo), usaríamos um servidor como Gunicorn.
-    app.run(
-        host='0.0.0.0', 
-        port=5000, 
-        debug=True
-    )
+    print("\n🚀 SERVIDOR ONLINE: http://127.0.0.1:5000")
+    app.run(host="0.0.0.0", port=5000)

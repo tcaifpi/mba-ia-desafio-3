@@ -1,29 +1,24 @@
-# Relatório de Auditoria Técnica - Code Smells Project
+# Auditoria Técnica de Código — Projeto Loja API
 
-**Projeto:** code-smells-project (Python/SQLite)
-**Data:** 13 de maio de 2026
-**Status:** Refatoração Concluída via Gemini Skill
+**Auditor:** Tiago Aragão
+**Data:** 14 de maio de 2026
+**Escopo:** Avaliação de Segurança e Arquitetura (Fase 1)
 
-## 1. Resumo Executivo
-O projeto inicial apresentava um alto nível de acoplamento, com lógica de interface, regras de negócio e persistência de dados misturadas no arquivo principal. A auditoria focou na transição para o padrão MVC para garantir manutenibilidade e testabilidade.
+## 1. Vulnerabilidades de Segurança Identificadas
+Durante a análise estática do código original, foram detectadas falhas graves que expõem o sistema a ataques externos:
 
-## 2. Diagnóstico de Anti-padrões
+* **SQL Injection [CRITICAL]**: O uso de concatenação de strings para montar queries SQL permite que usuários malintencionados executem comandos arbitrários no banco de dados.
+* **Exposição de Segredos [HIGH]**: A `SECRET_KEY` do Flask e credenciais de banco de dados estão "hardcoded" no arquivo principal, facilitando o vazamento de informações em caso de acesso ao repositório.
 
-| Anti-padrão | Localização | Gravidade | Descrição e Impacto |
-| :--- | :--- | :--- | :--- |
-| **Spaghetti Code** | `main.py` | **HIGH** | Código sem estrutura definida, dificultando a leitura e expansão do sistema. |
-| **Tight Coupling** | Global | **HIGH** | Forte acoplamento entre a lógica de banco de dados e as rotas, impedindo a troca de tecnologia de persistência. |
-| **Lack of Layers** | Estrutura de Pastas | **MEDIUM** | Ausência de separação entre Model, View e Controller. |
-| **Dry Violation** | Consultas SQL | **MEDIUM** | Repetição de lógica de conexão e abertura de banco de dados em múltiplas funções. |
+## 2. Débitos Técnicos e Anti-padrões
+A estrutura do projeto apresenta problemas de manutenção que impedem a escalabilidade:
 
-## 3. Transformação Arquitetural (MVC)
+* **God File (Objeto Divino)**: Toda a lógica da aplicação (rotas, persistência e regras de negócio) está centralizada no `app.py`. Isso viola o princípio de responsabilidade única.
+* **Acoplamento Forte**: A falta de uma camada de abstração para o banco de dados impede a troca de tecnologias ou a realização de testes unitários isolados.
+* **Tratamento de Erros Inexistente**: O sistema não possui validação de entradas, resultando em erros internos (HTTP 500) que expõem o stack trace para o cliente final.
 
-A refatoração automática via Gemini Skill aplicou as seguintes mudanças estruturais:
-
-1.  **Camada de Modelo (`models/`)**: Centralização da lógica de dados e queries SQLite, isolando o acesso ao banco.
-2.  **Camada de Controle (`controllers/`)**: Implementação da lógica de negócio e intermediação entre as rotas e os dados.
-3.  **Camada de Rotas (`routes/`)**: Definição limpa dos endpoints, delegando a execução para os controllers.
-4.  **Configuração de Banco (`database.py`)**: Singleton para gerenciamento de conexão, eliminando redundâncias.
-
-## 4. Conclusão
-O projeto foi modernizado com sucesso. A aplicação do padrão MVC eliminou os "code smells" de acoplamento e transformou o script inicial em uma aplicação estruturada seguindo as melhores práticas de Engenharia de Software.
+## 3. Recomendações de Mitigação
+Para sanear o projeto, as seguintes ações são obrigatórias:
+1. Implementar o padrão **MVC** (Model-View-Controller) para desacoplar as camadas.
+2. Utilizar **Prepared Statements** (parametrização) em todas as interações com o SQLite.
+3. Migrar configurações sensíveis para um arquivo de ambiente (`.env`).

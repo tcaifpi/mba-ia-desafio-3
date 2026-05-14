@@ -1,31 +1,16 @@
-# Relatório de Auditoria Técnica - Task Manager API
+1. Segurança e Governança de Dados
+Saneamento de Secrets: Eliminamos as senhas em texto plano do notification_service.py, movendo-as para variáveis de ambiente.
 
-**Projeto:** task-manager-api (Python/Flask)
-**Data:** 13 de maio de 2026
-**Status:** Auditoria Concluída / Correções de Segurança Aplicadas
+Blindagem contra IDOR: Implementamos o middleware JWT para garantir que um usuário não possa deletar ou editar tarefas de terceiros.
 
-## 1. Resumo Executivo
-A auditoria no sistema de gerenciamento de tarefas revelou vulnerabilidades críticas de segurança e gargalos de performance. Embora o projeto já apresentasse uma divisão inicial de pastas, a implementação interna dos métodos de autenticação e consulta ao banco de dados não seguia as normas modernas de segurança (OWASP) e eficiência.
+Criptografia de Senhas: Substituímos métodos inseguros pela biblioteca werkzeug.security com hashing PBKDF2.
 
-## 2. Diagnóstico de Anti-padrões
+🚀 2. Otimização de Performance (Eficiência do IFPI)
+Resolução do N+1: As rotas de listagem foram otimizadas com joinedload, consolidando múltiplas consultas ao banco em uma única operação.
 
-| Anti-padrão | Localização | Gravidade | Descrição e Impacto |
-| :--- | :--- | :--- | :--- |
-| **Insecure Hashing (MD5)** | `models/user.py` | **CRITICAL** | Uso do algoritmo MD5 para senhas. Vulnerável a ataques de colisão e Rainbow Tables. |
-| **SQL Injection** | `routes/task_routes.py` | **CRITICAL** | Consultas SQL construídas com f-strings/concatenação, permitindo a execução de comandos maliciosos. |
-| **N+1 Query Problem** | `services/task_service.py` | **HIGH** | O carregamento da lista de tarefas executa consultas individuais para cada usuário e categoria, gerando overhead no DB. |
-| **Hardcoded Secrets** | `app.py` | **HIGH** | A `SECRET_KEY` da aplicação está exposta no código-fonte em vez de ser lida via variáveis de ambiente. |
-| **Lack of Error Handling** | Controllers/Routes | **MEDIUM** | Ausência de blocos Try/Except globais, expondo stack traces do servidor em caso de erro. |
+Agregação SQL: Os relatórios em report_routes.py deixaram de usar loops lentos em Python para utilizar o processamento nativo do banco de dados via GROUP BY.
 
-## 3. Implementações de Refatoração
+📂 3. Organização Arquitetural (MVC)
+Desacoplamento: As rotas foram organizadas em Blueprints no app.py, facilitando a manutenção futura.
 
-### Segurança (Resolvido):
-- **Migração de Hash**: O sistema de senhas foi atualizado para utilizar `werkzeug.security` (PBKDF2 com Salt), eliminando o risco do MD5.
-- **Parametrização**: Todas as queries SQL foram refatoradas para utilizar *placeholders* `(?)`, neutralizando riscos de SQL Injection.
-
-### Performance e Arquitetura:
-- **Otimização de Queries**: Recomendada a substituição de loops de consulta por `JOIN` na tabela de tarefas para resolver o N+1.
-- **Modularização**: Utilização de **Blueprints** no Flask para organizar as rotas e desacoplar o arquivo `app.py`.
-
-## 4. Conclusão
-A intervenção técnica transformou uma aplicação vulnerável em uma API robusta. A correção do sistema de hashing de senhas é o ponto mais significativo, garantindo que o projeto agora esteja em conformidade com os padrões mínimos de segurança exigidos em ambientes de produção.
+Lógica no Model: Cálculos de status e atrasos foram movidos para a classe Task, limpando os controladores.

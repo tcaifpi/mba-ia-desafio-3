@@ -1,22 +1,23 @@
-# Catálogo de Anti-padrões e Heurísticas de Auditoria
+Catálogo de Anti-padrões e Heurísticas de Auditoria
+Este catálogo é utilizado para identificar vulnerabilidades de segurança, falhas estruturais e débitos técnicos nos projetos auditados.
 
-Use esta lista para identificar violações de design e segurança durante a Fase 2.
+1. Segurança e Integridade de Dados
+SQL Injection [CRITICAL]: Uso de f-strings ou concatenação direta de entradas de usuários em consultas SQL, permitindo a execução de comandos maliciosos no banco de dados.
 
-## ## 1. Segurança e Integridade
-- **SQL Injection:** Detecção de concatenação de strings ou f-strings diretamente em queries SQL (ex: `execute(f"SELECT * FROM users WHERE id = {id}")`).
-- **Hardcoded Secrets:** Chaves de API, senhas de banco ou tokens expostos diretamente no código em vez de usar variáveis de ambiente (`.env`).
-- **Exposição de Erros:** Blocos `except` que retornam o traceback completo para o usuário final ou logs que expõem dados sensíveis.
+Insecure Hashing / Deprecated APIs [CRITICAL]: Uso de algoritmos de criptografia obsoletos e vulneráveis, como MD5 ou SHA1, para o armazenamento de senhas.
 
-## ## 2. Arquitetura e Design (Code Smells)
-- **Fat Routes / God Routes:** Endpoints que contêm lógica de negócio complexa, cálculos ou chamadas diretas ao banco de dados.
-- **God Class / God File:** Arquivos únicos (como o `app.py` original) que gerenciam rotas, banco de dados e lógica de negócio simultaneamente.
-- **Acoplamento Forte:** Funções que dependem de variáveis globais ou estados mutáveis externos para funcionar.
-- **Falta de Tipagem/Validação:** Recebimento de dados de formulários ou JSON sem validação prévia de tipos ou campos obrigatórios.
+Hardcoded Secrets [CRITICAL]: Armazenamento de chaves de API, senhas de banco de dados ou tokens de acesso diretamente no código-fonte, em vez de utilizar variáveis de ambiente (.env).
 
-## ## 3. Manutenibilidade
-- **Código Morto:** Funções ou variáveis declaradas que nunca são chamadas.
-- **Inconsistência de Nomenclatura:** Mistura de snake_case e camelCase, ou nomes de variáveis genéricos (ex: `data`, `var1`, `temp`).
-- **Falta de Comentários em Lógicas Complexas:** Trechos de "código ninja" que realizam operações críticas sem documentação.
+Exposição de Informações Sensíveis [HIGH]: Tratamento de erros que retorna stack traces ou logs detalhados para o usuário final, expondo a estrutura interna da aplicação.
 
-## ## 4. Performance
-- **N+1 Query Problem:** Loops que realizam consultas ao banco de dados a cada iteração em vez de usar Joins ou Eager Loading.
+2. Arquitetura e Design (Code Smells)
+God Class / God File [HIGH]: Arquivos ou classes que concentram múltiplas responsabilidades (ex: rotas, lógica de negócio e persistência em um único arquivo), violando o Princípio de Responsabilidade Única (SRP).
+
+Fat Routes [MEDIUM]: Endpoints de API que contêm lógica de negócio complexa ou processamento de dados que deveria estar isolado em Controllers ou Services.
+
+Acoplamento Forte [MEDIUM]: Dependência direta entre módulos que dificulta a testabilidade e a manutenção, impedindo a substituição de componentes (ex: banco de dados).
+
+3. Performance e Manutenibilidade
+N+1 Query Problem [HIGH]: Execução de múltiplas consultas ao banco de dados dentro de loops, causando degradação severa de performance conforme o volume de dados cresce.
+
+Código Morto e Inconsistência [LOW]: Presença de funções não utilizadas, variáveis com nomes genéricos (ex: data, var1) e falta de padronização entre CamelCase e snake_case.

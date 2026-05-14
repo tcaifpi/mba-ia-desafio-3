@@ -1,63 +1,29 @@
+from database import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import get_db_connection
+from datetime import datetime
 
-class User:
-    def __init__(self, id, name, email, password_hash):
-        self.id = id
-        self.name = name
-        self.email = email
-        self.password_hash = password_hash
+class User(db.Model):
+    __tablename__ = 'users'
 
-    @staticmethod
-    def create(name, email, password):
-        """
-        Cria um novo usuário. 
-        Substitui o MD5 (inseguro) por PBKDF2 com Salt automático.
-        """
-        hashed_password = generate_password_hash(password)
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute(
-                'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-                (name, email, hashed_password)
-            )
-            conn.commit()
-            return cursor.lastrowid
-        except Exception as e:
-            print(f"Erro ao criar usuário: {e}")
-            return None
-        finally:
-            conn.close()
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), default='user')
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    @staticmethod
-    def find_by_email(email):
-        """Busca usuário por e-mail para validação de login."""
-        conn = get_db_connection()
-        user_data = conn.execute(
-            'SELECT * FROM users WHERE email = ?', (email,)
-        ).fetchone()
-        conn.close()
-        
-        if user_data:
-            return user_data
-        return None
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-    @staticmethod
-    def verify_login(email, password):
-        """Verifica credenciais comparando o hash seguro."""
-        user = User.find_by_email(email)
-        
-        # check_password_hash faz a mágica de comparar a senha plana com o hash+salt
-        if user and check_password_hash(user['password'], password):
-            return user
-        return None
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
-        """Oculta o hash da senha ao converter para dicionário (Boa prática de API)."""
         return {
-            "id": self.id,
-            "name": self.name,
-            "email": self.email
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'role': self.role,
+            'active': self.active
         }

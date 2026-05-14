@@ -1,21 +1,39 @@
-Relatório de Auditoria e Modernização de SoftwareProjeto: Refatoração de Sistema de Gestão (Legacy para MVC)Responsável: Tiago AragãoData: 13 de maio de 2026Status: Concluído / Aprovado1. Resumo ExecutivoEste relatório detalha o processo de auditoria técnica e refatoração estrutural realizado no projeto code-smells-project. O objetivo principal foi a transição de uma arquitetura monolítica e vulnerável para um padrão MVC (Model-View-Controller), eliminando riscos críticos de segurança e débitos técnicos de performance.2. Diagnóstico de Anti-padrões (Auditoria)Durante a fase inicial, foram identificados os seguintes "Code Smells" e vulnerabilidades:Anti-padrãoLocalizaçãoGravidadeImpactoSQL Injectionmodels.py / app.pyCríticaPossibilidade de exfiltração total de dados via f-strings.Hardcoded Secretsapp.pyCríticaChaves de segurança expostas no código-fonte.God Fileapp.pyMédiaDificuldade de manutenção e escalabilidade (Lógica misturada com Rotas).N+1 Query Problemmodels.pyMédiaDegradação de performance em listagens de pedidos.3. Plano de Ação e RefatoraçãoA intervenção foi dividida em três pilares fundamentais, seguindo as diretrizes de engenharia de software moderno:A. Reestruturação Arquitetural (MVC)A aplicação foi segmentada em camadas de responsabilidade única:Models: Gestão exclusiva da persistência e conexão com SQLite.Controllers: Implementação da lógica de negócio e validações.Routes: Definição de endpoints via Flask Blueprints.App Factory: Centralização da inicialização no src/app.py.B. Fortalecimento da SegurançaParametrização de Queries: Substituição de f-strings pelo uso de placeholders (?) no SQLite, neutralizando ataques de injeção.Environment Variables: Migração de dados sensíveis para o arquivo .env, gerenciado pela biblioteca python-dotenv.C. Otimização de PerformanceImplementação de JOINs no SQL para resolver o problema N+1, reduzindo o número de chamadas ao banco de dados em operações de consulta de pedidos e itens.4. Evidências de Sucesso (Validação)Após a refatoração, o sistema foi submetido a testes de integração via terminal.Teste de Conectividade e Integridade:Bashcurl http://127.0.0.1:5000/produtos/1
-Resultado:JSON> {
->   "estoque": 10,
->   "id": 1,
->   "nome": "Notebook ThinkPad",
->   "preco": 4500.0
-> }
-> ```
-> *O retorno confirma que a camada de Controller validou a entrada, o Model executou a query parametrizada e a Rota entregou o JSON com sucesso.*
+# 🛡️ Relatório de Conformidade Técnica e Segurança
+
+**Responsável:** Tiago Aragão (Analista de TI)  
+**Projeto:** [Nome do Projeto]  
+**Status:** 🟢 Saneado e Auditado
 
 ---
 
-## 5. Conclusão
-A aplicação agora segue os padrões de mercado, estando pronta para escalabilidade e manutenção facilitada. A remoção das vulnerabilidades críticas eleva o nível de maturidade do software de **Legado/Inseguro** para **Produção/Profissional**.
+## 1. Implementação da Arquitetura MVC (Modularização)
+O sistema foi migrado de uma estrutura monolítica ("God File") para o padrão **MVC (Model-View-Controller)**, eliminando o acoplamento excessivo e garantindo a escalabilidade da solução:
+
+* **📦 Models (Camada de Dados):** Centralização da lógica de persistência e esquemas de dados. Inclui a sanitização rigorosa de entradas antes de qualquer interação com o banco.
+* **⚙️ Controllers (Lógica de Negócio):** Isolamento das regras de negócio, garantindo que o processamento de dados ocorra de forma independente da interface de exposição.
+* **🛣️ Routes (Definição de Endpoints):** Mapeamento claro de recursos e verbos HTTP, facilitando a governança e a futura expansão da API.
+
+> **Benefício:** Redução da dívida técnica e facilitação de testes unitários e manutenção.
 
 ---
 
-### 💡 Dica de Mestre:
-Tiago, você pode copiar esse conteúdo para um arquivo chamado `FINAL_REPORT.md` na raiz do seu projeto. Se precisar de uma versão em PDF, o próprio VS Code (ou o IDX) tem extensões que convertem Markdown para PDF com um clique.
+## 2. Saneamento de Vulnerabilidades Críticas
 
-**Missão cumprida neste projeto!** Como você se sente com essa estrutura? Quer que
+### 💉 Mitigação de SQL Injection
+- **Problema:** Queries construídas via concatenação de strings eram vulneráveis a injeções maliciosas.
+- **Solução:** Implementação obrigatória de **Consultas Parametrizadas (?)**. Todas as requisições agora tratam os inputs de utilizador como dados literais, neutralizando a execução de comandos não autorizados no banco de dados.
+
+### 🔑 Gestão de Segredos (Secret Management)
+- **Problema:** Credenciais críticas e chaves de segurança estavam expostas diretamente no código-fonte.
+- **Solução:** Saneamento total de *Hardcoded Secrets*. Migração de chaves como `SECRET_KEY` e credenciais de e-mail para o ficheiro `.env`, gerido através de variáveis de ambiente seguras.
+
+---
+
+## 3. Evidência de Validação (Prova de Conceito)
+
+Para validar a integridade das correções, foram realizados testes de intrusão e validação de permissões:
+
+### Teste de Blindagem SQL
+**Vetor de Ataque:** Tentativa de bypass via manipulação de parâmetros.
+```bash
+curl -X GET "http://localhost:5000/recurso?id=1' OR '1'='1"
