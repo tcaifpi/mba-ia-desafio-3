@@ -1,30 +1,40 @@
-# Relatório de Auditoria Técnica - Ecommerce API Legacy
+# Relatório de Auditoria Técnica e Refatoração - Ecommerce API Legacy
 
+**Responsável:** Tiago Aragão (Analista de TI)
 **Projeto:** ecommerce-api-legacy (Node.js/Express)
-**Data:** 13 de maio de 2026
-**Status:** Auditoria Concluída / Refatoração Necessária
+**Data de Conclusão:** 18 de maio de 2026
+**Status:** Auditoria e Refatoração Concluídas ✅
 
 ## 1. Resumo Executivo
-A auditoria identificou que o projeto opera sob um padrão de "Big Ball of Mud". A lógica de negócio, persistência de dados e roteamento estão centralizadas em um único arquivo (`AppManager.js`), o que compromete severamente a manutenibilidade e a segurança da aplicação.
+Esta auditoria analisou a API de e-commerce legada, identificando que o projeto operava sob o padrão de "Big Ball of Mud". A lógica de negócio, persistência de dados e roteamento estavam centralizadas num único ficheiro (`AppManager.js`), o que comprometia severamente a manutenibilidade e a segurança da aplicação. O objetivo da Fase 3 foi a migração total para uma arquitetura **MVC (Model-View-Controller)**.
 
-## 2. Diagnóstico de Anti-padrões
+## 2. Diagnóstico de Anti-padrões e Vulnerabilidades
 
-| Anti-padrão | Localização | Gravidade | Descrição e Impacto |
+| Anti-padrão | Severidade | Descrição e Impacto | Solução Aplicada (Fase 3) |
 | :--- | :--- | :--- | :--- |
-| **God Class / Object** | `src/AppManager.js` | **CRITICAL** | O objeto `AppManager` gerencia usuários, checkouts e relatórios financeiros simultaneamente. |
-| **Fat Routes** | `src/routes/index.js` | **HIGH** | As rotas contêm lógica de validação e regras de negócio complexas que deveriam estar em Controllers. |
-| **Hardcoded Secrets** | `src/utils.js` | **CRITICAL** | Chaves de API de pagamento e credenciais de banco de dados expostas no código-fonte. |
-| **SQL Injection** | `src/AppManager.js` | **CRITICAL** | A rota de deleção de usuários concatena parâmetros diretamente na string SQL, permitindo ataques. |
-| **N+1 Query** | Relatório Financeiro | **HIGH** | O sistema executa uma consulta ao banco dentro de um loop para cada curso vendido, causando latência. |
-| **Callback Hell** | Diversos arquivos | **MEDIUM** | Uso excessivo de funções aninhadas, dificultando o tratamento de erros e legibilidade. |
+| **SQL Injection** | **CRITICAL** | Parâmetros de URL concatenados diretamente em strings SQL, permitindo a deleção não autorizada de dados. | Implementação de **Prepared Statements** (`?`) na Model `User.js`. |
+| **Hardcoded Secrets** | **CRITICAL** | Chaves de API e caminhos de base de dados expostos no código (`utils.js`). | Migração para variáveis de ambiente via ficheiro **`.env`** e pacote `dotenv`. |
+| **God Class (AppManager)** | **HIGH** | Um único objeto geria utilizadores, checkouts e relatórios, dificultando testes unitários. | Divisão em **Controllers** especializados (`Checkout`, `Report`, `User`). |
+| **N+1 Query** | **HIGH** | Relatório financeiro executava uma consulta ao banco dentro de um loop para cada curso. | Otimização via **JOIN único** com agregadores SQL (`SUM`, `COUNT`) no `ReportController`. |
+| **Insegurança de Hashing** | **MEDIUM** | Armazenamento de senhas em texto plano ou usando algoritmos obsoletos. | Implementação de **bcryptjs** com 10 rounds de salt para proteção de credenciais. |
 
-## 3. Plano de Modernização (MVC)
+## 3. Arquitetura Alvo (MVC)
 
-### Ações Imediatas:
-1.  **Desmembramento do AppManager**: Migração da lógica para `CheckoutController`, `UserController` e `ReportController`.
-2.  **Camada de Modelo**: Criação do `User.js` para abstrair as operações de banco de dados utilizando queries parametrizadas.
-3.  **Segurança de Ambiente**: Migração de chaves sensíveis para um arquivo `.env` e utilização do pacote `dotenv`.
-4.  **Otimização de Performance**: Refatoração da query de relatório financeiro para utilizar `JOIN` em vez de múltiplas consultas individuais.
+### 📂 Camada de Modelo (Models)
+* **`User.js`**: Centraliza a interação com o SQLite. Garante que os dados sensíveis (hashes de senha) sejam ocultados através do método `toDict()` antes de serem enviados para a API.
 
-## 4. Conclusão
-O projeto atual apresenta riscos de segurança imediatos (SQL Injection) e problemas de performance que impedem o escalonamento. A transição para a arquitetura MVC proposta mitigará esses riscos e alinhará o sistema às melhores práticas de desenvolvimento Node.js.
+### 🎮 Camada de Controle (Controllers)
+* **`CheckoutController.js`**: Gere o fluxo de compra, validação de utilizadores e registo de matrículas de forma isolada.
+* **`ReportController.js`**: Focado em performance, entrega relatórios administrativos complexos com impacto mínimo no banco de dados.
+* **`UserController.js`**: Interface para gestão de utilizadores com validação de parâmetros e tratamento de erros.
+
+### 🛣️ Camada de Roteamento (Routes)
+* **`index.js`**: Implementação de rotas limpas (**Thin Routes**). O roteador apenas mapeia os endpoints e delega a execução aos controllers, mantendo o `app.js` enxuto.
+
+## 4. Evidências de Validação
+* **Segurança SQL:** Testes de penetração via `curl` utilizando injeção de comandos na URL (`' OR '1'='1`) foram neutralizados. O sistema agora trata entradas maliciosas como strings literais.
+* **Integridade de Ambiente:** O sistema agora exige a presença de um ficheiro `.env` para carregar o `DB_PATH`, eliminando caminhos fixos (hardcoded).
+* **Escalabilidade:** A separação de pastas (`src/controllers`, `src/models`, `src/config`) permite manutenção modular sem risco de efeitos colaterais em outros componentes.
+
+## 5. Conclusão
+A refatoração transformou um protótipo inseguro num sistema de nível profissional. As vulnerabilidades críticas foram mitigadas e a dívida técnica foi reduzida significativamente, alinhando o projeto às melhores práticas de Engenharia de Software modernas e às exigências de segurança da informação.

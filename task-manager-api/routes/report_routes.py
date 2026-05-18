@@ -11,29 +11,30 @@ report_bp = Blueprint('reports', __name__)
 @report_bp.route('/reports/summary', methods=['GET'])
 def summary_report():
     """
-    Gera um relatório consolidado.
-    Otimizado: Substitui múltiplas queries por funções de agregação do SQL.
+    Gera um relatório consolidado da API de tarefas.
+    Otimizado: Substitui o anti-padrão de múltiplas queries por funções 
+    de agregação nativas do SQL, evitando loops na memória do Python.
     """
     try:
-        # 1. Estatísticas de Status (Uma única query GROUP BY)
+        # 1. Estatísticas de Status (Uma única query com GROUP BY)
         status_counts = db.session.query(
             Task.status, func.count(Task.id)
         ).group_by(Task.status).all()
         status_map = {status: count for status, count in status_counts}
 
-        # 2. Estatísticas de Prioridade (Uma única query GROUP BY)
+        # 2. Estatísticas de Prioridade (Uma única query com GROUP BY)
         priority_counts = db.session.query(
             Task.priority, func.count(Task.id)
         ).group_by(Task.priority).all()
         priority_map = {f'p{priority}': count for priority, count in priority_counts}
 
-        # 3. Contagem de Atrasos (Executada no Banco, não em Python)
+        # 3. Contagem de Atrasos (Executada inteiramente no Banco de Dados)
         overdue_count = Task.query.filter(
             Task.due_date < datetime.utcnow(),
             Task.status.notin_(['done', 'cancelled'])
         ).count()
 
-        # 4. Totais Gerais
+        # 4. Consolidação dos Totais Gerais
         total_tasks = sum(status_map.values())
         
         report = {
@@ -77,6 +78,6 @@ def create_category():
         db.session.add(new_cat)
         db.session.commit()
         return jsonify(new_cat.to_dict()), 201
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Erro ao criar categoria'}), 500
+        return jsonify({'error': str(e)}), 500

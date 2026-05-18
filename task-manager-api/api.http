@@ -1,0 +1,62 @@
+### Configuração de Variáveis Locais
+@baseUrl = http://localhost:5000/api
+
+### 1. Testar Rota Raiz (Health Check)
+GET http://localhost:5000/
+Accept: application/json
+
+###
+
+### 2. Registrar um Novo Usuário
+# @name registerUser
+POST {{baseUrl}}/users/register
+Content-Type: application/json
+
+{
+    "name": "Tiago Aragão",
+    "email": "tiago@ifpi.edu.br",
+    "password": "senha_segura_mba",
+    "role": "admin"
+}
+
+###
+
+### 3. Realizar Login para Capturar o Token JWT
+# @name login
+POST {{baseUrl}}/users/login
+Content-Type: application/json
+
+{
+    "email": "tiago@ifpi.edu.br",
+    "password": "senha_segura_mba"
+}
+
+### Guardar o Token retornado na resposta do login
+@authToken = {{login.response.body.token}}
+
+###
+
+### 4. Criar uma Nova Tarefa (Requer Token JWT)
+POST {{baseUrl}}/tasks
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "title": "Homologar API do Task Manager",
+    "description": "Validar a arquitetura MVC e as proteções OWASP na infraestrutura Flask.",
+    "priority": 1,
+    "due_date": "2026-06-01T18:00:00"
+}
+
+###
+
+### 5. Listar Tarefas do Usuário Autenticado
+GET {{baseUrl}}/tasks
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+###
+
+### 6. Testar Relatório Consolidado (Métricas SQL Agregadas)
+GET {{baseUrl}}/reports/summary
+Accept: application/json
