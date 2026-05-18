@@ -17,13 +17,13 @@ class CheckoutController {
             let user = await User.findByEmail(email);
             
             if (!user) {
-                // Se não existe, criamos um novo (Aqui entraria o Hash de senha do utils.js)
+                // Se não existe, criamos um novo (Com hashing seguro via Model)
                 const userId = await User.create({ name, email, password });
                 user = { id: userId, email };
             }
 
             // 3. Simulação de Integração de Pagamento (Requisito: Desacoplamento)
-            // Em um sistema real, aqui chamaríamos um Service de Pagamento
+            // Em um sistema real, aqui chamaríamos um Service de Pagamento (ex: Stripe)
             const paymentAuthorized = true; 
 
             if (!paymentAuthorized) {
@@ -31,6 +31,7 @@ class CheckoutController {
             }
 
             // 4. Registro da Matrícula (Enrollment)
+            // Uso de parametrização para evitar SQL Injection
             const enrollmentSql = `INSERT INTO enrollments (user_id, course_id, status) VALUES (?, ?, ?)`;
             await db.run(enrollmentSql, [user.id, courseId, 'active']);
 
@@ -43,6 +44,7 @@ class CheckoutController {
 
         } catch (error) {
             console.error('Erro crítico no Checkout:', error);
+            // Proteção: Não expõe detalhes do erro/banco ao cliente final
             return res.status(500).json({ error: 'Erro interno ao processar checkout.' });
         }
     }

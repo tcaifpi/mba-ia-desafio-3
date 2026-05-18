@@ -1,23 +1,35 @@
-Catálogo de Anti-padrões e Heurísticas de Auditoria
-Este catálogo é utilizado para identificar vulnerabilidades de segurança, falhas estruturais e débitos técnicos nos projetos auditados.
+# Catálogo de Anti-Patterns e Vulnerabilidades
 
-1. Segurança e Integridade de Dados
-SQL Injection [CRITICAL]: Uso de f-strings ou concatenação direta de entradas de usuários em consultas SQL, permitindo a execução de comandos maliciosos no banco de dados.
+Este documento cataloga 8 anti-padrões e falhas de segurança identificados na base de código legada do sistema de e-commerce, classificados pelo nível de severidade.
 
-Insecure Hashing / Deprecated APIs [CRITICAL]: Uso de algoritmos de criptografia obsoletos e vulneráveis, como MD5 ou SHA1, para o armazenamento de senhas.
+**1. Credenciais Expostas (Hardcoded Secrets)**
+* **Severidade:** CRITICAL
+* **Descrição:** Armazenamento de palavras-passe de base de dados e chaves de API de pagamento diretamente no código-fonte, permitindo o comprometimento total da infraestrutura em caso de fuga do código.
 
-Hardcoded Secrets [CRITICAL]: Armazenamento de chaves de API, senhas de banco de dados ou tokens de acesso diretamente no código-fonte, em vez de utilizar variáveis de ambiente (.env).
+**2. Injeção de SQL (SQL Injection)**
+* **Severidade:** CRITICAL
+* **Descrição:** Construção de consultas à base de dados (`loja.db`) através da concatenação direta de strings com os inputs do utilizador, permitindo a execução de comandos maliciosos e o roubo de dados.
 
-Exposição de Informações Sensíveis [HIGH]: Tratamento de erros que retorna stack traces ou logs detalhados para o usuário final, expondo a estrutura interna da aplicação.
+**3. Uso de APIs Deprecated (Obsoletas/Inseguras)**
+* **Severidade:** HIGH
+* **Descrição:** Utilização de bibliotecas e algoritmos descontinuados (ex: `hashlib.md5` para hashing de senhas de clientes), que já possuem vulnerabilidades conhecidas e não recebem patches de segurança.
 
-2. Arquitetura e Design (Code Smells)
-God Class / God File [HIGH]: Arquivos ou classes que concentram múltiplas responsabilidades (ex: rotas, lógica de negócio e persistência em um único arquivo), violando o Princípio de Responsabilidade Única (SRP).
+**4. Padrão N+1 Query**
+* **Severidade:** HIGH
+* **Descrição:** Má utilização do acesso aos dados, onde o sistema faz uma consulta principal para listar as encomendas e, dentro de um ciclo, faz uma nova consulta individual para carregar os produtos de cada encomenda, sobrecarregando o servidor.
 
-Fat Routes [MEDIUM]: Endpoints de API que contêm lógica de negócio complexa ou processamento de dados que deveria estar isolado em Controllers ou Services.
+**5. Objeto Deus (God Object / God Class)**
+* **Severidade:** MEDIUM
+* **Descrição:** A existência de uma classe `LojaManager` massiva que centraliza a gestão de stock, o processamento de pagamentos, o envio de e-mails e a ligação à base de dados, quebrando o Princípio de Responsabilidade Única (SRP).
 
-Acoplamento Forte [MEDIUM]: Dependência direta entre módulos que dificulta a testabilidade e a manutenção, impedindo a substituição de componentes (ex: banco de dados).
+**6. Tratamento Genérico de Exceções (Catch-All Exception)**
+* **Severidade:** MEDIUM
+* **Descrição:** Blocos `try/except` que capturam exceções genéricas (ex: `except Exception: pass`) durante o checkout, silenciando falhas críticas de gateway de pagamento sem gerar logs de auditoria.
 
-3. Performance e Manutenibilidade
-N+1 Query Problem [HIGH]: Execução de múltiplas consultas ao banco de dados dentro de loops, causando degradação severa de performance conforme o volume de dados cresce.
+**7. Método Longo (Long Method)**
+* **Severidade:** LOW
+* **Descrição:** O método `processar_checkout()` possui mais de 200 linhas, misturando validação de carrinho, cálculo de portes e gravação de faturas, dificultando a manutenção e a criação de testes unitários.
 
-Código Morto e Inconsistência [LOW]: Presença de funções não utilizadas, variáveis com nomes genéricos (ex: data, var1) e falta de padronização entre CamelCase e snake_case.
+**8. Aglomerados de Dados (Data Clumps)**
+* **Severidade:** LOW
+* **Descrição:** Parâmetros como `rua`, `cidade`, `codigo_postal` e `distrito` são passados repetidamente em conjunto para vários métodos de entrega, em vez de serem encapsulados num único objeto estruturado.

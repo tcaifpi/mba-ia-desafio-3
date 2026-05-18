@@ -1,15 +1,11 @@
 require('dotenv').config();
 const express = require('express');
-const routes = require('./routes');
-const { initDb } = require('./config/db');
+const routes = require('./routes'); // Isto já carrega o src/routes/index.js
 
 const app = express();
 app.use(express.json());
 
-// Inicia o Banco de Dados (Cria tabelas se não existirem)
-// Aqui você pode adaptar o initDb do AppManager original para o db.js
-// initDb(); 
-
+// O app.js delega tudo para o roteador
 app.use(routes);
 
 const PORT = process.env.PORT || 3000;

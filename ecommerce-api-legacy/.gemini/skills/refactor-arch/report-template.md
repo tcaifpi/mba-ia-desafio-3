@@ -1,39 +1,34 @@
-# 🛡️ Relatório de Conformidade Técnica e Segurança
+# Relatório de Conclusão: Refatoração e Segurança (Fase 3)
 
-**Responsável:** Tiago Aragão (Analista de TI)  
-**Projeto:** [Nome do Projeto]  
-**Status:** 🟢 Saneado e Auditado
-
----
-
-## 1. Implementação da Arquitetura MVC (Modularização)
-O sistema foi migrado de uma estrutura monolítica ("God File") para o padrão **MVC (Model-View-Controller)**, eliminando o acoplamento excessivo e garantindo a escalabilidade da solução:
-
-* **📦 Models (Camada de Dados):** Centralização da lógica de persistência e esquemas de dados. Inclui a sanitização rigorosa de entradas antes de qualquer interação com o banco.
-* **⚙️ Controllers (Lógica de Negócio):** Isolamento das regras de negócio, garantindo que o processamento de dados ocorra de forma independente da interface de exposição.
-* **🛣️ Routes (Definição de Endpoints):** Mapeamento claro de recursos e verbos HTTP, facilitando a governança e a futura expansão da API.
-
-> **Benefício:** Redução da dívida técnica e facilitação de testes unitários e manutenção.
+**Responsável:** Tiago Aragão
+**Projeto:** Ecommerce API Legacy (Node.js/Express)
+**Status:** Concluído / Saneado ✅
 
 ---
+
+## 1. Implementação da Arquitetura MVC
+Para resolver o débito técnico do "God File" (antigo AppManager), a aplicação foi migrada para uma estrutura modular, garantindo a separação de responsabilidades (SoC):
+
+* **src/models/**: Abstração da lógica de persistência e sanitização SQL (Ex: `User.js`).
+* **src/controllers/**: Gestão da lógica de negócio e processamento de requisições.
+* **src/routes/**: Roteamento centralizado e "magro" via `index.js`.
+* **src/config/**: Centralização da conexão assíncrona com o SQLite.
+
+
+
+[Image of MVC software architecture pattern]
+
 
 ## 2. Saneamento de Vulnerabilidades Críticas
+As falhas de segurança detectadas na auditoria técnica foram corrigidas seguindo os padrões de Engenharia de Software:
 
-### 💉 Mitigação de SQL Injection
-- **Problema:** Queries construídas via concatenação de strings eram vulneráveis a injeções maliciosas.
-- **Solução:** Implementação obrigatória de **Consultas Parametrizadas (?)**. Todas as requisições agora tratam os inputs de utilizador como dados literais, neutralizando a execução de comandos não autorizados no banco de dados.
+* **SQL Injection**: Implementada a parametrização de queries (`?`) em todos os métodos de busca e remoção, neutralizando ataques via URL.
+* **Gestão de Segredos**: Migração da `SECRET_KEY` e caminhos de base de dados para variáveis de ambiente utilizando a biblioteca `dotenv`.
+* **Segurança de Hashing**: Substituição de algoritmos inseguros pelo `bcryptjs` com 10 rounds de salt.
 
-### 🔑 Gestão de Segredos (Secret Management)
-- **Problema:** Credenciais críticas e chaves de segurança estavam expostas diretamente no código-fonte.
-- **Solução:** Saneamento total de *Hardcoded Secrets*. Migração de chaves como `SECRET_KEY` e credenciais de e-mail para o ficheiro `.env`, gerido através de variáveis de ambiente seguras.
+## 3. Evidência de Validação (Teste de Intrusão)
+Foi realizado um teste final para garantir que a vulnerabilidade de SQL Injection foi mitigada com sucesso.
 
----
-
-## 3. Evidência de Validação (Prova de Conceito)
-
-Para validar a integridade das correções, foram realizados testes de intrusão e validação de permissões:
-
-### Teste de Blindagem SQL
-**Vetor de Ataque:** Tentativa de bypass via manipulação de parâmetros.
+**Comando executado no terminal:**
 ```bash
-curl -X GET "http://localhost:5000/recurso?id=1' OR '1'='1"
+curl -X DELETE "http://localhost:3000/api/users/1%27%20OR%20%271%27%3D%271"
